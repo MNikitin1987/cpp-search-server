@@ -59,16 +59,9 @@ public:
 
     void AddDocument(int document_id, const string& document) {
         const vector<string> words = SplitIntoWordsNoStop(document);
-     
         for (const auto& word : words) {
-            double count = 0;
-            // считаем кол-во повторений каждого слова в документе
-            for (const auto& w : words) if (w == word) count++; 
-            // считаем tf каждого слова документа
-            word_to_documents_freqs_[word].insert({document_id, (count / words.size())});
+            word_to_documents_freqs_[word][document_id] += 1.0 / words.size();          
         }
-        
-        // считаем общее кол-во документов
         document_count_++;
     }
 
@@ -119,6 +112,7 @@ private:
 
     QueryWord ParseQueryWord(string text) const {
         bool is_minus = false;
+        // Word shouldn't be empty
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
@@ -140,16 +134,19 @@ private:
         }
         return query;
     }
+    
+    double CountWordIdf(const string& word) const {
+        return log (document_count_ / word_to_documents_freqs_.at(word).size());
+    }
 
     vector<Document> FindAllDocuments(const Query& query) const {
         vector<Document> matched_documents;
         map<int, double> document_to_relevance;
-        //map<string, double> word_count;
         
         for (auto& plus_word : query.plus_words) {
             if (word_to_documents_freqs_.count(plus_word)) {
                 for (const auto& [doc_id, word_tf] : word_to_documents_freqs_.at(plus_word)) {  
-                    document_to_relevance[doc_id] += word_tf * log (document_count_ / word_to_documents_freqs_.at(plus_word).size());
+                    document_to_relevance[doc_id] += word_tf * CountWordIdf(plus_word);
                 }
             }
         }
