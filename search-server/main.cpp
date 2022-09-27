@@ -11,6 +11,7 @@
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const double ACCURACY = 1e-6;
 
 string ReadLine() {
     string s;
@@ -82,9 +83,8 @@ public:
         const Query query = ParseQuery(raw_query);
         auto matched_documents = FindAllDocuments(query, filter);
 
-        const double ACCURACY = 1e-6;
         sort(matched_documents.begin(), matched_documents.end(),
-             [ACCURACY](const Document& lhs, const Document& rhs) {
+             [](const Document& lhs, const Document& rhs) {
                  if (abs(lhs.relevance - rhs.relevance) < ACCURACY) {
                      return lhs.rating > rhs.rating;
                  } else {
@@ -174,7 +174,6 @@ private:
 
     QueryWord ParseQueryWord(string text) const {
         bool is_minus = false;
-        // Word shouldn't be empty
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
@@ -215,8 +214,8 @@ private:
             }
             const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);
             for (const auto [document_id, term_freq] : word_to_document_freqs_.at(word)) {
-                if (filter(document_id, documents_.at(document_id).status, documents_.at(document_id).rating)) {
-                    // по замечанию "Можно избежать двойного поиска документа по идентификатору" не увидел где именно и как избежать двойного поиска по ID, его вроде и так нет...
+                const auto& doc_data = documents_.at(document_id);
+                if (filter(document_id, doc_data.status, doc_data.rating)) {
                     document_to_relevance[document_id] += term_freq * inverse_document_freq;
                 }
             }
