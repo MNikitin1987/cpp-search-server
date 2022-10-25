@@ -10,6 +10,7 @@
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const double ACCURACY = 1e-6;
 
 string ReadLine() {
     string s;
@@ -77,29 +78,20 @@ enum class DocumentStatus {
 };
 
 class SearchServer {
-public:
-    
-    inline static constexpr int INVALID_DOCUMENT_ID = -1;
-    
+public: 
     template <typename StringContainer>
     explicit SearchServer(const StringContainer& stop_words)
-        : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
-        for (const auto& word : stop_words_) {
-            if(!IsValidWord(word)) {
-                throw invalid_argument("Стоп-слова содержат недопустимые символы"s);
-            }
+        : stop_words_(MakeUniqueNonEmptyStrings(stop_words))
+    {
+        if (!all_of(stop_words.begin(), stop_words.end(), IsValidWord)) {
+            throw invalid_argument("Стоп-слова содержат недопустимые символы"s);
         }
     }
 
     explicit SearchServer(const string& stop_words_text)
         : SearchServer(
-            SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
+            SplitIntoWords(stop_words_text)) 
     {
-        for (const auto& word : stop_words_) {
-            if(!IsValidWord(word)) {
-                throw invalid_argument("Стоп-слова содержат недопустимые символы"s);
-            }
-        }
     }
 
     void AddDocument(int document_id, const string& document, DocumentStatus status,
@@ -114,10 +106,6 @@ public:
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double inv_word_count = 1.0 / words.size();
         for (const string& word : words) {
-            if (!IsValidWord(word)) {
-                throw invalid_argument("Документ не был добавлен, так как содержит спецсимволы"s);
-            }
-
             word_to_document_freqs_[word][document_id] += inv_word_count;
         }
         documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
@@ -127,21 +115,11 @@ public:
     vector<Document> FindTopDocuments(const string& raw_query,
                                       DocumentPredicate document_predicate) const {
         const Query query = ParseQuery(raw_query);
-        if (!IsExtraDash(raw_query)) {
-            throw invalid_argument("В словах поискового запроса есть лишние тире (-)"s);
-        }
-        const vector<string> words = SplitIntoWords(raw_query);
-        for (const string& word : words) {
-            if (!IsValidWord(word)) {
-                throw invalid_argument("В словах поискового запроса есть недопустимые символы"s);
-            }
-        }
-        
         auto matched_documents = FindAllDocuments(query, document_predicate);
 
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document& lhs, const Document& rhs) {
-                 if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                 if (abs(lhs.relevance - rhs.relevance) < ACCURACY) {
                      return lhs.rating > rhs.rating;
                  } else {
                      return lhs.relevance > rhs.relevance;
@@ -177,15 +155,7 @@ public:
     
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
         const Query query = ParseQuery(raw_query);
-        if (!IsExtraDash(raw_query)) {
-            throw invalid_argument("В словах поискового запроса есть лишние тире (-)"s);
-        }
         const vector<string> words = SplitIntoWords(raw_query);
-        for (const string& word : words) {
-            if (!IsValidWord(word)) {
-                throw invalid_argument("В словах поискового запроса есть недопустимые символы"s);
-            }
-        }
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
@@ -222,18 +192,8 @@ private:
     }
     
     static bool IsExtraDash(const string& string) {
-        char previous_ch = ' ';
-        int i = 0;
-        int size = string.size() - 1;
-        for (const auto& ch : string) {
-            if (ch == '-' && previous_ch == '-') {
-                return false;
-            }
-            if (ch == '-' && i == size) {
-                return false;
-            }
-            ++i;
-            previous_ch = ch;
+        if (!string.find("--"s) || !string.find('-', string.size()-1)) {
+            return false;
         }
         return true;
     }
@@ -247,9 +207,16 @@ private:
     vector<string> SplitIntoWordsNoStop(const string& text) const {
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
+            if (!IsValidWord(word)) {
+                throw invalid_argument("Документ не был добавлен, так как содержит спецсимволы"s); 
+            }
+            if (!IsExtraDash(word)) {
+                throw invalid_argument("Документ не был добавлен, так как содержит лишнее тире (-)"s); 
+            }
             if (!IsStopWord(word)) {
                 words.push_back(word);
             }
+            
         }
         return words;
     }
@@ -288,6 +255,12 @@ private:
     Query ParseQuery(const string& text) const {
         Query query;
         for (const string& word : SplitIntoWords(text)) {
+            if (!IsValidWord(word)) {
+                throw invalid_argument("В словах поискового запроса есть недопустимые символы"s);
+            }
+            if (!IsExtraDash(word)) {
+                throw invalid_argument("В словах поискового запроса есть лишние тире (-)"s);
+            }
             const QueryWord query_word = ParseQueryWord(word);
             if (!query_word.is_stop) {
                 if (query_word.is_minus) {
@@ -347,7 +320,7 @@ void PrintDocument(const Document& document) {
 }
 
 int main() {
-    SearchServer search_server("и в на"s);
+    SearchServer search_server("и в на -"s);
 
     search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, {7, 2, 7});
     search_server.AddDocument(1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, {1, 2});
@@ -358,5 +331,6 @@ int main() {
     for (const Document& document : documents) {
         PrintDocument(document);
     }
+    
     return 0;
 }
