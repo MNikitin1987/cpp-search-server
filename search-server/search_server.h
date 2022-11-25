@@ -24,39 +24,15 @@ enum class DocumentStatus {
 class SearchServer {
 public:
     template <typename StringContainer>
-    explicit SearchServer(const StringContainer& stop_words)
-        : stop_words_(MakeUniqueNonEmptyStrings(stop_words))  // Extract non-empty stop words
-    {
-        if (!all_of(stop_words_.begin(), stop_words_.end(), IsValidWord)) {
-            throw std::invalid_argument("Some of stop words are invalid");
-        }
-    }
+    explicit SearchServer(const StringContainer& stop_words);
 
     explicit SearchServer(const std::string& stop_words_text);
 
     void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
-
+    
     template <typename DocumentPredicate>
     std::vector<Document> FindTopDocuments(const std::string& raw_query,
-                                      DocumentPredicate document_predicate) const {
-        const auto query = ParseQuery(raw_query);
-
-        auto matched_documents = FindAllDocuments(query, document_predicate);
-
-        sort(matched_documents.begin(), matched_documents.end(),
-             [](const Document& lhs, const Document& rhs) {
-                 if (std::abs(lhs.relevance - rhs.relevance) < 1e-6) {
-                     return lhs.rating > rhs.rating;
-                 } else {
-                     return lhs.relevance > rhs.relevance;
-                 }
-             });
-        if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
-            matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
-        }
-
-        return matched_documents;
-    }
+                                      DocumentPredicate document_predicate) const;
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status) const;
 
@@ -79,24 +55,11 @@ private:
 
     bool IsStopWord(const std::string& word) const;
 
-    static bool IsValidWord(const std::string& word) {
-        return none_of(word.begin(), word.end(), [](char c) {
-            return c >= '\0' && c < ' ';
-        });
-    }
+    static bool IsValidWord(const std::string& word);
 
     std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
 
-    static int ComputeAverageRating(const std::vector<int>& ratings) {
-        if (ratings.empty()) {
-            return 0;
-        }
-        int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
-        return rating_sum / static_cast<int>(ratings.size());
-    }
+    static int ComputeAverageRating(const std::vector<int>& ratings);
 
     struct QueryWord {
         std::string data;
@@ -104,47 +67,48 @@ private:
         bool is_stop;
     };
 
-    QueryWord ParseQueryWord(const std::string& text) const {
-        if (text.empty()) {
-            throw std::invalid_argument("Query word is empty");
-        }
-        std::string word = text;
-        bool is_minus = false;
-        if (word[0] == '-') {
-            is_minus = true;
-            word = word.substr(1);
-        }
-        if (word.empty() || word[0] == '-' || !IsValidWord(word)) {
-            throw std::invalid_argument("Query word " + text + " is invalid");
-        }
 
-        return {word, is_minus, IsStopWord(word)};
-    }
+    QueryWord ParseQueryWord(const std::string& text) const;
 
     struct Query {
         std::set<std::string> plus_words;
         std::set<std::string> minus_words;
     };
 
-    Query ParseQuery(const std::string& text) const {
-        Query result;
-        for (const std::string& word : SplitIntoWords(text)) {
-            const auto query_word = ParseQueryWord(word);
-            if (!query_word.is_stop) {
-                if (query_word.is_minus) {
-                    result.minus_words.insert(query_word.data);
-                } else {
-                    result.plus_words.insert(query_word.data);
-                }
-            }
-        }
-        return result;
-    }
+    Query ParseQuery(const std::string& text) const;
 
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
-
+    
     template <typename DocumentPredicate>
     std::vector<Document> FindAllDocuments(const Query& query,
+                                      DocumentPredicate document_predicate) const;
+
+};
+
+    template <typename DocumentPredicate>
+    std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query,
+                                      DocumentPredicate document_predicate) const {
+        const auto query = ParseQuery(raw_query);
+
+        auto matched_documents = FindAllDocuments(query, document_predicate);
+
+        sort(matched_documents.begin(), matched_documents.end(),
+             [](const Document& lhs, const Document& rhs) {
+                 if (std::abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                     return lhs.rating > rhs.rating;
+                 } else {
+                     return lhs.relevance > rhs.relevance;
+                 }
+             });
+        if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
+            matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+        }
+
+        return matched_documents;
+    }
+
+    template <typename DocumentPredicate>
+    std::vector<Document> SearchServer::FindAllDocuments(const Query& query,
                                       DocumentPredicate document_predicate) const {
         std::map<int, double> document_to_relevance;
         for (const std::string& word : query.plus_words) {
@@ -176,4 +140,12 @@ private:
         }
         return matched_documents;
     }
-};
+
+    template <typename StringContainer>
+    SearchServer::SearchServer(const StringContainer& stop_words)
+        : stop_words_(MakeUniqueNonEmptyStrings(stop_words))  // Extract non-empty stop words
+    {
+        if (!all_of(stop_words_.begin(), stop_words_.end(), IsValidWord)) {
+            throw std::invalid_argument("Some of stop words are invalid");
+        }
+    }

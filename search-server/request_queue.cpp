@@ -23,7 +23,7 @@
     void RequestQueue::AddRequest(bool result) {
         ++time_current_;
         while (!requests_.empty() && min_in_day_ <= time_current_ - requests_.front().time_of_request) {
-            if (requests_.front().EmptyResult == true) {
+            if (requests_.front().empty_result == true) {
                 --request_no_result_;
             }
             requests_.pop_front();

@@ -26,7 +26,7 @@ public:
 private:
     struct QueryResult {
         int time_of_request;
-        bool EmptyResult;
+        bool empty_result;
     };
     std::deque<QueryResult> requests_;
     const static int min_in_day_ = 1440;
