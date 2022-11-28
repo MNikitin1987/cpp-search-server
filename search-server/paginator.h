@@ -27,14 +27,6 @@ private:
 };
 
 template <typename Iterator>
-std::ostream& std::operator<< (ostream& output, IteratorRange<Iterator> values) {
-    for (Iterator value = values.begin(); value < values.end(); advance(value, 1)) {
-        output << *value;
-    }
-    return output;
-}
-
-template <typename Iterator>
 class Paginator {
         // тело класса
 public:
@@ -67,4 +59,12 @@ public:
 template <typename Container>
 auto Paginate(const Container& c, size_t page_size) {
     return Paginator(begin(c), end(c), page_size);
+}
+
+template <typename Iterator>
+std::ostream& std::operator<< (ostream& output, IteratorRange<Iterator> values) {
+    for (Iterator value = values.begin(); value < values.end(); advance(value, 1)) {
+        output << *value;
+    }
+    return output;
 }

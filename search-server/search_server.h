@@ -13,6 +13,7 @@
 #include <cmath>
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const std::map<std::string, double> EMPTY_MAP;
 
 enum class DocumentStatus {
     ACTUAL,
@@ -23,6 +24,11 @@ enum class DocumentStatus {
 
 class SearchServer {
 public:
+    std::vector<int>::iterator begin();
+    std::vector<int>::iterator end();
+    
+    void RemoveDocument(int document_id);
+    
     template <typename StringContainer>
     explicit SearchServer(const StringContainer& stop_words);
 
@@ -38,8 +44,8 @@ public:
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
     int GetDocumentCount() const;
-
-    int GetDocumentId(int index) const;
+    
+    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
 
@@ -50,6 +56,7 @@ private:
     };
     const std::set<std::string> stop_words_;
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
+    std::map<int, std::map<std::string, double>> documents_words_frequencies_;
     std::map<int, DocumentData> documents_;
     std::vector<int> document_ids_;
 
