@@ -1,12 +1,12 @@
 #include "search_server.h"
 
 std::vector<int>::iterator SearchServer::begin() {
-        return document_ids_.begin();
-    }
+    return document_ids_.begin();
+}
     
 std::vector<int>::iterator SearchServer::end() {
-        return document_ids_.end();
-    }
+    return document_ids_.end();
+}
 
 SearchServer::SearchServer(const std::string& stop_words_text)
 : SearchServer(SplitIntoWords(stop_words_text)) {
@@ -52,7 +52,7 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
         }
         if (word_to_document_freqs_.at(word).count(document_id)) {
             matched_words.push_back(word);
-         }
+        }
     }
     for (const std::string& word : query.minus_words) {
         if (word_to_document_freqs_.count(word) == 0) {
@@ -93,11 +93,7 @@ int SearchServer::ComputeAverageRating(const std::vector<int>& ratings) {
     if (ratings.empty()) {
         return 0;
     }
-    int rating_sum = 0;
-    for (const int rating : ratings) {
-        rating_sum += rating;
-    }
-    return rating_sum / static_cast<int>(ratings.size());
+    return std::accumulate(ratings.begin(), ratings.end(), 0) / static_cast<int>(ratings.size());
 }
 
 SearchServer::QueryWord SearchServer::ParseQueryWord(const std::string& text) const {

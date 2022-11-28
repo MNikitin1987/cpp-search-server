@@ -6,27 +6,17 @@
 
 void RemoveDuplicates(SearchServer& search_server) {
     std::set<int> docs_to_delete;
-    std::map<int, std::set<std::string>> docs_to_compare;
+    std::map<std::set<std::string>, int> docs_to_compare;
     
     for (auto i : search_server) {
-        for (auto iter = search_server.GetWordFrequencies(i).begin(); iter != search_server.GetWordFrequencies(i).end(); ++iter) {
-            auto [key, value] = *iter;
-            docs_to_compare[i].insert(key);
+        std::set<std::string> words;
+        for (auto j : search_server.GetWordFrequencies(i)) {
+            words.insert(j.first); 
         }
-    }
-    
-    for (auto i : search_server) {
-        for (auto j : search_server) {
-            if (i == j) {
-                continue;
-            }
-            if (docs_to_compare[i] == docs_to_compare[j]) {
-                if (i > j) {
-                    docs_to_delete.insert(i);
-                } else {
-                    docs_to_delete.insert(j);
-                }
-            }
+        if (docs_to_compare.find(words) == docs_to_compare.end()) {
+            docs_to_compare[words];
+        } else {
+            docs_to_delete.insert(i);
         }
     }
     

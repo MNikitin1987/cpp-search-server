@@ -6,7 +6,6 @@
 #include "log_duration.h"
 #include "remove_duplicates.h"
 
-
 using namespace std;
 
 void AddDocument(SearchServer& s, int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings) {
