@@ -1,14 +1,23 @@
 #pragma once
+
 #include <iostream>
+#include <ostream>
+
+using namespace std;
 
 struct Document {
     Document() = default;
-
     Document(int id, double relevance, int rating);
-
     int id = 0;
     double relevance = 0.0;
     int rating = 0;
 };
 
-std::ostream& operator<< (std::ostream& output, const Document& value);
+enum class DocumentStatus {
+    ACTUAL,
+    IRRELEVANT,
+    BANNED,
+    REMOVED,
+};
+
+ostream& operator<<(ostream&, const Document&);

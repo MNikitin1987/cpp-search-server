@@ -1,8 +1,9 @@
 #pragma once
-#include <string>
-#include <vector>
+
 #include <iostream>
+#include <string>
 
-std::string ReadLine();
+using namespace std;
 
+string ReadLine();
 int ReadLineWithNumber();
